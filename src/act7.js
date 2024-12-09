@@ -1,17 +1,39 @@
 import swapi from './swapi.js';
 
 //Exemple d'inicialització de la llista de pel·lícules. Falten dades!
-async function setMovieHeading(movieId, titleSelector) {
+async function setMovieHeading(movieId, titleSelector, infoSelector, directorSelector) {
   // Obtenim els elements del DOM amb QuerySelector
   const title = document.querySelector(titleSelector);
+  const info = document.querySelector(infoSelector);
+  const director = document.querySelector(directorSelector)
 
   // Obtenim la informació de la pelicula
   const movieInfo = await swapi.getMovieInfo(movieId);
+  console.log (movieInfo);
   // Injectem
   title.innerHTML = movieInfo.name;
+  info.innerHTML = `Episodi ${movieInfo.episodeID} - ${movieInfo.release}`;
+  director.innerHTML = `Director: ${movieInfo.director}`;
+
 }
 
-async function initMovieSelect(selector) {}
+async function initMovieSelect(selector) {
+  const movies = await swapi.listMoviesSorted();
+
+  const select = document.querySelector(selector);
+
+  const options = document.createElement('option');
+  options.value = '';
+  options.textContent = 'Selecciona una opcio';
+  select.appendChild(options);
+
+  for (const movie of movies){
+    const options = document.createElement('option');
+    options.value = _filmIdToEpisodeId(movie.episodeID);
+    options.textContent = movie.name;
+    select.appendChild(options);
+  }
+}
 
 function deleteAllCharacterTokens() {}
 
@@ -23,11 +45,38 @@ async function _createCharacterTokens() {}
 
 function _addDivChild(parent, className, html) {}
 
-function setMovieSelectCallbacks() {}
+function setMovieSelectCallbacks() {
+  const select = document.getElementById('select-movie');
+  console.log (select);
 
-async function _handleOnSelectMovieChanged(event) {}
+  select.addEventListener('change', async () => {
+    const selectedValue = select.value;
+    _handleOnSelectMovieChanged(selectedValue)
+  })
+}
 
-function _filmIdToEpisodeId(episodeID) {}
+async function _handleOnSelectMovieChanged(event) {
+
+  setMovieHeading(event, '.movie__title', '.movie__info', '.movie__director');
+
+  const result = await swapi.getMovieCharactersAndHomeworlds(event);
+
+  const homeworlds = result.characters.map(({homeworld}) => homeworld);
+  const planets = _removeDuplicatesAndSort(homeworlds);
+
+  const selectHomeworld = document.querySelector("#select-homeworld");
+  _populateHomeWorldSelector(planets, selectHomeworld)
+  
+}
+
+function _filmIdToEpisodeId(episodeID) {
+  const mapping = episodeToMovieIDs.find(item => item.e === episodeID)
+  if (mapping){
+    return mapping.m
+  } else {
+    return null
+  }
+}
 
 // "https://swapi.dev/api/films/1/" --> Episode_id = 4 (A New Hope)
 // "https://swapi.dev/api/films/2/" --> Episode_id = 5 (The Empire Strikes Back)
@@ -45,9 +94,12 @@ let episodeToMovieIDs = [
   { m: 6, e: 3 },
 ];
 
-function _setMovieHeading({ name, episodeID, release, director }) {}
-
-function _populateHomeWorldSelector(homeworlds) {}
+function _populateHomeWorldSelector(homeworlds, selector) {
+  selector.innerHTML = '<option>Seleciona un homeworld</option>';
+  homeworlds.forEach(planet => {
+    selector.innerHTML += `<option value=${planet} >${planet}</option>`
+  })
+}
 
 /**
  * Funció auxiliar que podem reutilitzar: eliminar duplicats i ordenar alfabèticament un array.
